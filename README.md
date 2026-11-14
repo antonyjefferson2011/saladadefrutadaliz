@@ -1,4 +1,4 @@
-# Salada de Fruta da Linds
+# Salada de Fruta da Liz
 
 React + TypeScript + Tailwind + Firebase (Auth, Firestore) + ImgBB. Pedidos finalizados pelo WhatsApp (86 99826-5488).
 
