@@ -2,6 +2,7 @@ import {FormEvent,useEffect,useMemo,useState} from 'react';
 import {EmailAuthProvider,User,onAuthStateChanged,reauthenticateWithCredential,sendPasswordResetEmail,signInWithEmailAndPassword,signOut,updatePassword} from 'firebase/auth';
 import {addDoc,collection,deleteDoc,doc,onSnapshot,orderBy,query,setDoc,updateDoc} from 'firebase/firestore';
 import {auth,db} from '../firebase';
+import {ADMIN_EMAIL,IMGBB_KEY} from '../config';
 import {brl,Media,Order,Product,STATUS,uploadImg} from '../lib';
 
 export default function Admin() {
@@ -12,30 +13,28 @@ export default function Admin() {
 }
 
 function Login() {
-  const [email,setEmail] = useState(''); const [pw,setPw] = useState(''); const [err,setErr] = useState('');
+  const [pw,setPw] = useState(''); const [err,setErr] = useState('');
   async function go(e:FormEvent){e.preventDefault();setErr('');
-    try{await signInWithEmailAndPassword(auth,email,pw);}catch{setErr('E-mail ou senha incorretos.');}}
+    try{await signInWithEmailAndPassword(auth,ADMIN_EMAIL,pw);}catch{setErr('Senha incorreta.');}}
   return (<main className="grid min-h-screen place-items-center bg-rose-50 p-4">
     <form onSubmit={go} className="card w-full max-w-sm space-y-3">
       <h1 className="text-2xl font-extrabold text-morango">🍓 Painel administrativo</h1>
-      <input className="input" type="email" placeholder="E-mail" value={email} onChange={e=>setEmail(e.target.value)} required/>
-      <input className="input" type="password" placeholder="Senha" value={pw} onChange={e=>setPw(e.target.value)} required/>
+      <input className="input" type="password" placeholder="Senha" autoFocus value={pw} onChange={e=>setPw(e.target.value)} required/>
       {err&&<p role="alert" className="font-bold text-morangoescuro">{err}</p>}
       <button className="btn w-full">Entrar</button></form></main>);
 }
 
-const TABS = ['Painel','Pedidos','Produtos','Galeria','Config'];
+const TABS = ['Painel','Pedidos','Produtos','Galeria','Senha'];
 
 function Panel({user}:{user:User}) {
   const [tab,setTab] = useState('Painel');
   const [orders,setOrders] = useState<Order[]>([]); const [products,setProducts] = useState<Product[]>([]); const [media,setMedia] = useState<Media[]>([]);
-  const [key,setKey] = useState(''); const [denied,setDenied] = useState(false);
+  const [denied,setDenied] = useState(false);
   useEffect(()=>{
     const d=()=>setDenied(true);
     const u=[onSnapshot(query(collection(db,'orders'),orderBy('createdAt','desc')),s=>setOrders(s.docs.map(x=>({id:x.id,...x.data()} as Order))),d),
       onSnapshot(collection(db,'products'),s=>setProducts(s.docs.map(x=>({id:x.id,...x.data()} as Product)))),
-      onSnapshot(collection(db,'gallery'),s=>setMedia(s.docs.map(x=>({id:x.id,...x.data()} as Media)))),
-      onSnapshot(doc(db,'settings','integrations'),s=>setKey(s.data()?.imgbbKey||''),()=>{})];
+      onSnapshot(collection(db,'gallery'),s=>setMedia(s.docs.map(x=>({id:x.id,...x.data()} as Media))))];
     return ()=>u.forEach(f=>f());
   },[]);
   return (<div className="min-h-screen bg-rose-50">
@@ -44,12 +43,12 @@ function Panel({user}:{user:User}) {
       <nav className="flex flex-wrap gap-1">{TABS.map(t=><button key={t} onClick={()=>setTab(t)} className={`rounded-full px-4 py-1.5 font-bold ${tab===t?'bg-morango text-white':'hover:bg-rose-100'}`}>{t}</button>)}</nav>
       <button onClick={()=>signOut(auth)} className="font-bold underline">Sair</button></header>
     <main className="mx-auto max-w-5xl space-y-6 p-4">
-      {denied&&<p role="alert" className="card font-bold text-morangoescuro">Esta conta não tem permissão de administrador. Confira o e-mail em firestore.rules.</p>}
+      {denied&&<p role="alert" className="card font-bold text-morangoescuro">Sem permissão. Confira se o usuário admin foi criado no Firebase (veja o README).</p>}
       {tab==='Painel'&&<Dashboard orders={orders}/>}
       {tab==='Pedidos'&&<Orders orders={orders}/>}
-      {tab==='Produtos'&&<Products products={products} k={key}/>}
-      {tab==='Galeria'&&<Gallery media={media} k={key}/>}
-      {tab==='Config'&&<Config user={user} k={key}/>}
+      {tab==='Produtos'&&<Products products={products}/>}
+      {tab==='Galeria'&&<Gallery media={media}/>}
+      {tab==='Senha'&&<Config user={user}/>}
     </main></div>);
 }
 
@@ -85,15 +84,15 @@ function Orders({orders}:{orders:Order[]}) {
   </details>)}</div>);
 }
 
-function Upload({value,onChange,k}:{value:string;onChange:(u:string)=>void;k:string}) {
+function Upload({value,onChange}:{value:string;onChange:(u:string)=>void}) {
   const [msg,setMsg] = useState('');
-  async function pick(f?:File){if(!f)return;setMsg('Enviando…');try{onChange(await uploadImg(f,k));setMsg('');}catch(e){setMsg((e as Error).message);}}
+  async function pick(f?:File){if(!f)return;setMsg('Enviando…');try{onChange(await uploadImg(f,IMGBB_KEY));setMsg('');}catch(e){setMsg((e as Error).message);}}
   return (<div className="flex items-center gap-3">{value&&<img src={value} alt="" className="h-16 w-16 rounded-xl object-cover"/>}
     <label className="btn-sm cursor-pointer">{value?'Trocar imagem':'Enviar imagem'}<input type="file" accept="image/*" hidden onChange={e=>pick(e.target.files?.[0])}/></label>{msg&&<span className="text-sm font-bold">{msg}</span>}</div>);
 }
 
 const EMPTY = {name:'',description:'',price:'',image:'',active:true};
-function Products({products,k}:{products:Product[];k:string}) {
+function Products({products}:{products:Product[]}) {
   const [f,setF] = useState(EMPTY); const [id,setId] = useState('');
   async function save(e:FormEvent){e.preventDefault();const price=parseFloat(String(f.price).replace(',','.'));if(!f.name||!(price>0))return;
     const data={name:f.name.trim(),description:f.description.trim(),price,image:f.image,active:f.active};
@@ -104,7 +103,7 @@ function Products({products,k}:{products:Product[];k:string}) {
       <input className="input" placeholder="Nome" value={f.name} onChange={e=>setF({...f,name:e.target.value})} required/>
       <textarea className="input" placeholder="Descrição" rows={2} value={f.description} onChange={e=>setF({...f,description:e.target.value})}/>
       <input className="input" placeholder="Preço (ex.: 12,50)" inputMode="decimal" value={f.price} onChange={e=>setF({...f,price:e.target.value})} required/>
-      <Upload value={f.image} onChange={u=>setF({...f,image:u})} k={k}/>
+      <Upload value={f.image} onChange={u=>setF({...f,image:u})}/>
       <label className="flex items-center gap-2"><input type="checkbox" checked={f.active} onChange={e=>setF({...f,active:e.target.checked})}/> Visível no site</label>
       <div className="flex gap-2"><button className="btn">Salvar</button>{id&&<button type="button" className="btn-alt" onClick={()=>{setF(EMPTY);setId('');}}>Cancelar</button>}</div></form>
     <div className="grid gap-3 md:grid-cols-2">{products.map(p=><div key={p.id} className="card flex gap-3">
@@ -114,30 +113,24 @@ function Products({products,k}:{products:Product[];k:string}) {
           <button className="text-morangoescuro" onClick={()=>confirm(`Excluir "${p.name}"?`)&&deleteDoc(doc(db,'products',p.id))}>Excluir</button></div></div></div>)}</div></>);
 }
 
-function Gallery({media,k}:{media:Media[];k:string}) {
+function Gallery({media}:{media:Media[]}) {
   const [url,setUrl] = useState('');
   const add=(type:'image'|'video',u:string)=>u&&addDoc(collection(db,'gallery'),{type,url:u});
   return (<><div className="card space-y-3"><h3 className="font-bold">Adicionar à galeria</h3>
-    <Upload value="" onChange={u=>add('image',u)} k={k}/>
+    <Upload value="" onChange={u=>add('image',u)}/>
     <form className="flex gap-2" onSubmit={e=>{e.preventDefault();add('video',url.trim());setUrl('');}}><input className="input" type="url" placeholder="Link direto de vídeo (.mp4)" value={url} onChange={e=>setUrl(e.target.value)} required/><button className="btn">Adicionar</button></form></div>
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{media.map(m=><div key={m.id} className="card p-2">
       {m.type==='video'?<video src={m.url} className="aspect-square w-full rounded-xl object-cover" muted/>:<img src={m.url} alt="" className="aspect-square w-full rounded-xl object-cover"/>}
       <button className="mt-2 text-sm font-bold text-morangoescuro" onClick={()=>deleteDoc(doc(db,'gallery',m.id))}>Excluir</button></div>)}</div></>);
 }
 
-function Config({user,k}:{user:User;k:string}) {
-  const [key,setKey] = useState(k); useEffect(()=>setKey(k),[k]);
+function Config({user}:{user:User}) {
   const [cur,setCur] = useState(''); const [nw,setNw] = useState(''); const [msg,setMsg] = useState('');
   async function change(e:FormEvent){e.preventDefault();
     try{await reauthenticateWithCredential(user,EmailAuthProvider.credential(user.email!,cur));await updatePassword(user,nw);setMsg('Senha alterada.');setCur('');setNw('');}
-    catch{setMsg('Não foi possível alterar. Confira a senha atual (mínimo 8 caracteres na nova).');}}
-  return (<>
-    <form className="card space-y-3" onSubmit={async e=>{e.preventDefault();await setDoc(doc(db,'settings','integrations'),{imgbbKey:key.trim()});setMsg('Chave salva.');}}>
-      <h3 className="font-bold">Chave da API do ImgBB</h3><p className="text-sm">Guardada no Firestore e legível só pelo administrador — não fica no código público.</p>
-      <input className="input" value={key} onChange={e=>setKey(e.target.value)} placeholder="API key"/><button className="btn">Salvar chave</button></form>
-    <form className="card space-y-3" onSubmit={change}><h3 className="font-bold">Alterar senha</h3>
-      <input className="input" type="password" placeholder="Senha atual" value={cur} onChange={e=>setCur(e.target.value)} required/>
-      <input className="input" type="password" placeholder="Nova senha" minLength={8} value={nw} onChange={e=>setNw(e.target.value)} required/>
-      <div className="flex gap-2"><button className="btn">Alterar senha</button><button type="button" className="btn-alt" onClick={()=>sendPasswordResetEmail(auth,user.email!).then(()=>setMsg('E-mail de redefinição enviado.'))}>Enviar e-mail de redefinição</button></div></form>
-    {msg&&<p role="status" className="card font-bold">{msg}</p>}</>);
+    catch{setMsg('Não foi possível alterar. Confira a senha atual (nova: mínimo 6 caracteres).');}}
+  return (<form className="card space-y-3" onSubmit={change}><h3 className="font-bold">Alterar senha</h3>
+    <input className="input" type="password" placeholder="Senha atual" value={cur} onChange={e=>setCur(e.target.value)} required/>
+    <input className="input" type="password" placeholder="Nova senha" minLength={6} value={nw} onChange={e=>setNw(e.target.value)} required/>
+    <button className="btn">Alterar senha</button>{msg&&<p role="status" className="font-bold">{msg}</p>}</form>);
 }
