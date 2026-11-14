@@ -1,0 +1,10 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+html{scroll-behavior:smooth}body{@apply font-body bg-creme text-tinta antialiased}
+h1,h2,h3{@apply font-display tracking-tight}
+@layer components{
+.btn{@apply inline-flex items-center justify-center gap-2 rounded-full bg-morango px-6 py-3 font-bold text-white transition hover:bg-morangoescuro focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-morango disabled:opacity-50}
+.btn-alt{@apply btn bg-white text-morango ring-2 ring-morango hover:bg-morango hover:text-white}
+.btn-sm{@apply rounded-full px-4 py-1.5 text-sm font-bold bg-morango text-white hover:bg-morangoescuro}
+.input{@apply w-full rounded-xl border-2 border-rose-100 bg-white px-4 py-2.5 outline-none focus:border-morango}
+.card{@apply rounded-3xl bg-white p-5 shadow-[0_6px_24px_-8px_rgba(230,55,87,.25)]}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
