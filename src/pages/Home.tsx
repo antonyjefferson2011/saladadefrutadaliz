@@ -41,7 +41,7 @@ export default function Home() {
   return (<div>
     <header className="sticky top-0 z-30 border-b border-rose-100 bg-creme/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <a href="#" className="font-display text-xl font-extrabold text-morango">🍓 Salada da Linds</a>
+        <a href="#" className="font-display text-xl font-extrabold text-morango">🍓 Salada da Liz</a>
         <nav className="hidden gap-6 font-bold md:flex">{nav.map(([n,h])=><a key={h} href={h} className="hover:text-morango">{n}</a>)}</nav>
         <a href="#pedido" className="btn-sm">Fazer pedido</a>
       </div>
